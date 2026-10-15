@@ -1,0 +1,545 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#76c5ff">
+  <title>SKYFRONT — Battle Royale</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+      background: #76c5ff;
+      touch-action: none;
+    }
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      padding: 18px;
+    }
+    .panel {
+      background: #102335b8;
+      border: 1px solid #ffffff40;
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-shadow: 0 1px 3px #000;
+      backdrop-filter: blur(8px);
+    }
+    #brand {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 3px;
+    }
+    #match {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      text-align: right;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    #status {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    #bottom {
+      position: absolute;
+      bottom: 20px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    #health { width: 190px; }
+    .bar {
+      height: 9px;
+      background: #ffffff45;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 7px;
+    }
+    #healthFill {
+      height: 100%;
+      width: 100%;
+      background: #45e68a;
+      transition: width .2s;
+    }
+    #weapon { text-align: right; }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      color: white;
+      text-shadow: 0 1px 5px #000;
+    }
+    #start {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      background: #07162675;
+      padding: 24px;
+    }
+    #card {
+      width: min(430px, 100%);
+      padding: 30px;
+      border-radius: 18px;
+      background: #0a1b2bea;
+      border: 1px solid #ffffff40;
+      text-align: center;
+    }
+    #card h1 {
+      margin: 0;
+      font-size: clamp(36px, 10vw, 60px);
+      letter-spacing: 5px;
+    }
+    #card p { color: #c6d8e9; line-height: 1.6; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: #ffb632;
+      color: #17202a;
+      padding: 15px 24px;
+      font-weight: 900;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    #start button { width: 100%; margin-top: 12px; }
+    .control {
+      position: fixed;
+      z-index: 3;
+      bottom: 110px;
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      background: #1023359c;
+      border: 2px solid #ffffffa0;
+      color: white;
+      display: none;
+      padding: 0;
+    }
+    #move { left: 24px; }
+    #fire { right: 24px; background: #e44b43b8; }
+    #message {
+      position: fixed;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px;
+      font-weight: 900;
+      text-align: center;
+      text-shadow: 0 2px 5px #000;
+    }
+    @media (pointer: coarse) {
+      .control { display: block; }
+      #bottom { bottom: 12px; }
+      #health { width: 145px; }
+      #hud { padding: 12px; }
+      #brand { top: 12px; left: 12px; font-size: 16px; }
+      #match { top: 12px; right: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="world"></canvas>
+
+  <div id="hud">
+    <div id="brand" class="panel">SKYFRONT</div>
+    <div id="match" class="panel">
+      <div>SOLO • FRONTIER</div>
+      <div id="alive">10 ALIVE</div>
+      <div id="kills">ELIMINATIONS: 0</div>
+    </div>
+    <div id="status" class="panel">EXPLORE THE FRONTIER</div>
+    <div id="crosshair">+</div>
+    <div id="bottom">
+      <div id="health" class="panel">
+        <div>HEALTH <span id="healthText">100</span></div>
+        <div class="bar"><div id="healthFill"></div></div>
+      </div>
+      <div id="weapon" class="panel">
+        <div>ASSAULT RIFLE</div>
+        <strong><span id="ammo">30</span> / 120</strong>
+      </div>
+    </div>
+  </div>
+
+  <button id="move" class="control">MOVE</button>
+  <button id="fire" class="control">FIRE</button>
+
+  <div id="message"></div>
+
+  <div id="start">
+    <div id="card">
+      <div style="color:#ffbd48;font-weight:bold;letter-spacing:4px">THE FRONTIER AWAITS</div>
+      <h1>SKYFRONT</h1>
+      <p>
+        Explore a bright island of green hills, dirt roads,
+        scattered houses, and open skies.
+      </p>
+      <p>WASD to move • Mouse to look • Click to explore</p>
+      <button id="play">DEPLOY TO ISLAND</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("world");
+    const ctx = canvas.getContext("2d");
+
+    let w, h, running = false;
+    let player = { x: 0, z: 0, angle: 0, health: 100 };
+    let keys = {};
+    let ammo = 30;
+    let kills = 0;
+    let shots = 0;
+    let clouds = [];
+    let trees = [];
+    let houses = [];
+    let bots = [];
+    let lastTime = 0;
+
+    function resize() {
+      const dpr = Math.min(devicePixelRatio || 1, 1.5);
+      w = innerWidth;
+      h = innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    addEventListener("resize", resize);
+    resize();
+
+    for (let i = 0; i < 12; i++) {
+      clouds.push({
+        x: Math.random() * 1.5,
+        y: 0.05 + Math.random() * 0.28,
+        s: 0.5 + Math.random() * 1.1,
+        speed: 0.0003 + Math.random() * 0.0005
+      });
+    }
+
+    for (let i = 0; i < 90; i++) {
+      trees.push({
+        x: (Math.random() - .5) * 2200,
+        z: 100 + Math.random() * 1800,
+        s: .7 + Math.random() * 1.2
+      });
+    }
+
+    for (let i = 0; i < 24; i++) {
+      houses.push({
+        x: (Math.random() - .5) * 1500,
+        z: 220 + Math.random() * 1200,
+        s: .8 + Math.random() * .8,
+        color: ["#e9c79a","#d88d68","#d6dce0","#c9b889"][i%4]
+      });
+    }
+
+    for (let i = 0; i < 9; i++) {
+      bots.push({
+        x: (Math.random() - .5) * 500,
+        z: 350 + Math.random() * 900,
+        alive: true
+      });
+    }
+
+    function project(x, z, height = 0) {
+      const dx = x - player.x;
+      const dz = z - player.z;
+      const a = player.angle;
+      const forward = dx * Math.sin(a) + dz * Math.cos(a);
+      const side = dx * Math.cos(a) - dz * Math.sin(a);
+
+      if (forward < 12) return null;
+
+      const focal = Math.min(w, h) * .85;
+      const scale = focal / forward;
+
+      return {
+        x: w/2 + side * scale,
+        y: h*.48 - height*scale - forward * .025,
+        scale
+      };
+    }
+
+    function polygon(points, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      points.forEach((p,i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawSky(dt) {
+      const sky = ctx.createLinearGradient(0,0,0,h*.65);
+      sky.addColorStop(0,"#55b8ff");
+      sky.addColorStop(1,"#d8f2ff");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0,0,w,h);
+
+      clouds.forEach(c => {
+        c.x += c.speed * dt;
+        if (c.x > 1.5) c.x = -.4;
+        const x = c.x * w;
+        const y = c.y * h;
+        const s = c.s * Math.min(w,h) / 9;
+        ctx.fillStyle = "#ffffffdd";
+        ctx.beginPath();
+        ctx.ellipse(x,y,s*1.4,s*.42,0,0,Math.PI*2);
+        ctx.ellipse(x-s*.45,y+s*.02,s*.7,s*.5,0,0,Math.PI*2);
+        ctx.ellipse(x+s*.25,y-s*.17,s*.8,s*.65,0,0,Math.PI*2);
+        ctx.fill();
+      });
+
+      polygon([
+        {x:0,y:h*.48},{x:w*.12,y:h*.35},
+        {x:w*.28,y:h*.45},{x:w*.48,y:h*.32},
+        {x:w*.69,y:h*.44},{x:w*.85,y:h*.34},
+        {x:w,y:h*.45},{x:w,y:h*.66},{x:0,y:h*.66}
+      ],"#729d87");
+
+      ctx.fillStyle = "#7cc66b";
+      ctx.fillRect(0,h*.49,w,h*.51);
+      polygon([
+        {x:0,y:h*.58},{x:w*.24,y:h*.53},
+        {x:w*.45,y:h*.59},{x:w*.72,y:h*.52},
+        {x:w,y:h*.57},{x:w,y:h*.72},{x:0,y:h*.72}
+      ],"#61ad53");
+    }
+
+    function drawGround() {
+      polygon([
+        {x:w*.44,y:h*.52},{x:w*.56,y:h*.52},
+        {x:w*1.05,y:h},{x:-w*.05,y:h}
+      ],"#b79a6b");
+
+      ctx.strokeStyle = "#9a8058";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(w*.5,h*.57);
+      ctx.lineTo(w*.5,h);
+      ctx.stroke();
+    }
+
+    function drawHouse(o) {
+      const p = project(o.x,o.z,0);
+      if (!p || p.scale < .012 || p.scale > 4) return;
+      const s = Math.min(p.scale * 55 * o.s, 250);
+      const x = p.x, y = p.y;
+
+      ctx.fillStyle = "#00000025";
+      ctx.fillRect(x-s*.5,y-s*.05,s*1.3,s*.35);
+
+      polygon([
+        {x:x-s*.5,y:y-s*.5},
+        {x:x+s*.5,y:y-s*.5},
+        {x:x+s*.5,y:y+s*.3},
+        {x:x-s*.5,y:y+s*.3}
+      ],o.color);
+
+      polygon([
+        {x:x-s*.65,y:y-s*.5},
+        {x:x,y:y-s*.95},
+        {x:x+s*.65,y:y-s*.5}
+      ],"#854c38");
+
+      ctx.fillStyle = "#425a6a";
+      ctx.fillRect(x-s*.28,y-s*.35,s*.18,s*.2);
+      ctx.fillRect(x+s*.12,y-s*.35,s*.18,s*.2);
+
+      ctx.fillStyle = "#62432c";
+      ctx.fillRect(x-s*.07,y+s*.02,s*.17,s*.28);
+    }
+
+    function drawTree(o) {
+      const p = project(o.x,o.z,0);
+      if (!p || p.scale < .009 || p.scale > 5) return;
+      const s = Math.min(p.scale * 65 * o.s, 180);
+
+      ctx.fillStyle = "#715036";
+      ctx.fillRect(p.x-s*.09,p.y-s*.1,s*.18,s*.55);
+
+      ctx.fillStyle = "#286b3b";
+      ctx.beginPath();
+      ctx.arc(p.x,p.y-s*.35,s*.42,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#38884a";
+      ctx.beginPath();
+      ctx.arc(p.x-s*.16,p.y-s*.43,s*.3,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    function drawBot(b) {
+      if (!b.alive) return;
+      const p = project(b.x,b.z,0);
+      if (!p || p.scale < .009 || p.scale > 3) return;
+      const s = Math.min(p.scale*45,80);
+
+      ctx.fillStyle = "#263a4c";
+      ctx.fillRect(p.x-s*.23,p.y-s*.05,s*.46,s*.75);
+      ctx.fillStyle = "#e6b99a";
+      ctx.beginPath();
+      ctx.arc(p.x,p.y-s*.19,s*.19,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = "#ffb632";
+      ctx.fillRect(p.x-s*.25,p.y-s*.08,s*.5,s*.15);
+    }
+
+    function drawPlayer() {
+      // Third-person character silhouette.
+      const x = w/2;
+      const y = h*.73;
+      ctx.fillStyle = "#23384a";
+      ctx.fillRect(x-17,y,34,65);
+      ctx.fillStyle = "#d8ae8c";
+      ctx.beginPath();
+      ctx.arc(x,y-13,14,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = "#ffb632";
+      ctx.fillRect(x-18,y+7,36,10);
+      ctx.fillStyle = "#202b35";
+      ctx.fillRect(x+12,y+17,34,8);
+    }
+
+    function render(time = 0) {
+      const dt = Math.min(time-lastTime,40);
+      lastTime = time;
+      drawSky(dt);
+      drawGround();
+
+      houses.slice().sort((a,b)=>b.z-a.z).forEach(drawHouse);
+      trees.slice().sort((a,b)=>b.z-a.z).forEach(drawTree);
+      bots.slice().sort((a,b)=>b.z-a.z).forEach(drawBot);
+
+      if (running) drawPlayer();
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+    function updateHUD() {
+      document.getElementById("healthText").textContent = player.health;
+      document.getElementById("healthFill").style.width = player.health+"%";
+      document.getElementById("ammo").textContent = ammo;
+      document.getElementById("kills").textContent = "ELIMINATIONS: "+kills;
+      document.getElementById("alive").textContent =
+        (10-kills)+" ALIVE";
+    }
+
+    function moveLoop() {
+      if (running) {
+        const speed = keys.Shift ? 4.2 : 2.3;
+        if (keys.w || keys.ArrowUp) {
+          player.x += Math.sin(player.angle)*speed;
+          player.z += Math.cos(player.angle)*speed;
+        }
+        if (keys.s || keys.ArrowDown) {
+          player.x -= Math.sin(player.angle)*speed;
+          player.z -= Math.cos(player.angle)*speed;
+        }
+        if (keys.a || keys.ArrowLeft) {
+          player.x -= Math.cos(player.angle)*speed;
+          player.z += Math.sin(player.angle)*speed;
+        }
+        if (keys.d || keys.ArrowRight) {
+          player.x += Math.cos(player.angle)*speed;
+          player.z -= Math.sin(player.angle)*speed;
+        }
+      }
+      requestAnimationFrame(moveLoop);
+    }
+    requestAnimationFrame(moveLoop);
+
+    addEventListener("keydown",e => {
+      keys[e.key] = true;
+      keys[e.key.toLowerCase()] = true;
+      if (e.key.toLowerCase()==="r" && running) {
+        ammo=30;
+        updateHUD();
+      }
+    });
+
+    addEventListener("keyup",e => {
+      keys[e.key] = false;
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    canvas.addEventListener("click",e => {
+      if (!running) return;
+      player.angle += (Math.random()-.5)*.1;
+      if (ammo > 0) {
+        ammo--;
+        shots++;
+        const living = bots.filter(b=>b.alive);
+        if (living.length && shots%4===0) {
+          living[0].alive=false;
+          kills++;
+          document.getElementById("message").textContent="TARGET ELIMINATED";
+          setTimeout(()=>document.getElementById("message").textContent="",900);
+        }
+        updateHUD();
+      }
+    });
+
+    let dragging=false,lastX=0;
+    canvas.addEventListener("pointerdown",e=>{
+      if (e.pointerType==="mouse") {
+        dragging=true;
+        lastX=e.clientX;
+      }
+    });
+    addEventListener("pointerup",()=>dragging=false);
+    addEventListener("pointermove",e=>{
+      if (dragging && running) {
+        player.angle += (e.clientX-lastX)*.005;
+        lastX=e.clientX;
+      }
+    });
+
+    document.getElementById("play").addEventListener("click",()=>{
+      running=true;
+      document.getElementById("start").style.display="none";
+      updateHUD();
+    });
+
+    document.getElementById("move").addEventListener("click",()=>{
+      if (!running) return;
+      player.z+=Math.cos(player.angle)*40;
+      player.x+=Math.sin(player.angle)*40;
+    });
+
+    document.getElementById("fire").addEventListener("click",()=>{
+      if (running) canvas.dispatchEvent(new MouseEvent("click"));
+    });
+
+    updateHUD();
+  </script>
+</body>
+</html>
