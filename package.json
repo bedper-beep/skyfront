@@ -1,0 +1,16 @@
+
+{
+  "name": "skyfront",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SKYFRONT - an original browser-based battle royale prototype",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.4.0"
+  }
+}
